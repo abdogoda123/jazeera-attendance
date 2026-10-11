@@ -1,0 +1,185 @@
+"use client";
+
+import { useState } from "react";
+import Link from "next/link";
+import { GraduationCap, ArrowRight, QrCode as QrIcon, Lock, User, LogOut, PlusCircle } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+
+// قائمة الـ 20 كلمة مرور المسموح بها للدخول (اسم المستخدم دائماً: admin)
+const validPasswords = Array.from({ length: 20 }, (_, i) => `pwd${i + 1}`);
+
+export default function DoctorPage() {
+  const [username, setUsername] = useState("admin");
+  const [password, setPassword] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // بيانات المحاضرة التي يكتبها الدكتور بنفسه
+  const [doctorName, setDoctorName] = useState("");
+  const [subjectName, setSubjectName] = useState("");
+  const [sessionCode, setSessionCode] = useState("");
+
+  function handleLogin(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    
+    if (username.trim() === "admin" && validPasswords.includes(password.trim())) {
+      setIsAuthenticated(true);
+      setErrorMsg("");
+    } else {
+      setErrorMsg("كلمة المرور غير صحيحة. استخدم إحدى كلمات المرور (من pwd1 إلى pwd20).");
+    }
+  }
+
+  function createSession(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!doctorName.trim() || !subjectName.trim()) return;
+
+    // توليد رمز QR فريد يعتمد على مادة الدكتور والوقت
+    const code = "JAZIRA-" + subjectName.trim() + "-" + Math.floor(100000 + Math.random() * 900000);
+    setSessionCode(code);
+  }
+
+  function handleLogout() {
+    setIsAuthenticated(false);
+    setPassword("");
+    setDoctorName("");
+    setSubjectName("");
+    setSessionCode("");
+  }
+
+  return (
+    <main dir="rtl" className="min-h-screen bg-[#031326] px-4 py-8 text-white">
+      <div className="mx-auto max-w-2xl">
+        <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm text-sky-300 hover:text-white">
+          <ArrowRight size={18} /> الرئيسية
+        </Link>
+
+        <header className="mb-7 flex items-center gap-4">
+          <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4 text-sky-400">
+            <GraduationCap size={32} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">بوابة عضو الهيئة التدريسية (الدكتور)</h1>
+            <p className="mt-1 text-sm text-slate-400">
+              أكاديمية الجزيرة العالية للهندسة والتكنولوجيا الحديثة
+            </p>
+          </div>
+        </header>
+
+        {/* 1. نموذج تسجيل الدخول */}
+        {!isAuthenticated ? (
+          <form onSubmit={handleLogin} className="space-y-5 rounded-2xl border border-sky-900 bg-[#061c32] p-5 sm:p-7">
+            <h2 className="flex items-center gap-2 text-lg font-bold">
+              <Lock className="text-sky-400" /> تسجيل دخول الدكتور
+            </h2>
+
+            <div>
+              <label className="mb-2 block text-sm text-slate-300">اسم المستخدم (Username)</label>
+              <div className="relative">
+                <User className="absolute right-3 top-3.5 text-slate-500" size={18} />
+                <input
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="admin"
+                  required
+                  className="w-full rounded-xl border border-sky-900 bg-[#031326] px-4 py-3 pr-10 outline-none focus:border-sky-400"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm text-slate-300">كلمة المرور (Password)</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="أدخل كلمة المرور (pwd1 إلى pwd20)"
+                required
+                className="w-full rounded-xl border border-sky-900 bg-[#031326] px-4 py-3 outline-none focus:border-sky-400"
+              />
+            </div>
+
+            <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-bold transition hover:bg-blue-500">
+              دخول البوابة
+            </button>
+
+            {errorMsg && (
+              <p className="rounded-xl border border-rose-900 bg-rose-950/60 p-3 text-sm text-rose-200">
+                {errorMsg}
+              </p>
+            )}
+
+            <div className="rounded-xl border border-sky-900/60 bg-sky-950/30 p-3 text-xs text-slate-400 leading-6">
+              <p className="font-bold text-sky-300 mb-1">💡 تجربة الدخول:</p>
+              اسم المستخدم الثابت: <code className="text-emerald-400 font-bold">admin</code><br />
+              كلمات المرور المتاحة (20 كلمة): <code className="text-emerald-400 font-bold">pwd1</code> إلى <code className="text-emerald-400 font-bold">pwd20</code>
+            </div>
+          </form>
+        ) : (
+          /* 2. النموذج التفاعلي بعد الدخول (الدكتور يحدد اسمه والمادة بيديه) */
+          <div className="space-y-6">
+            <div className="flex items-center justify-between rounded-2xl border border-sky-900 bg-[#061c32] p-5">
+              <div>
+                <p className="text-sm text-sky-300">تم تسجيل الدخول بنجاح</p>
+                <h3 className="text-lg font-bold text-emerald-400">حساب الدكتور المعتمد</h3>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-1 rounded-xl bg-rose-600/20 border border-rose-500/30 px-3 py-2 text-xs text-rose-300 hover:bg-rose-600/30 transition"
+              >
+                <LogOut size={15} /> تسجيل الخروج
+              </button>
+            </div>
+
+            <form onSubmit={createSession} className="space-y-5 rounded-2xl border border-sky-900 bg-[#061c32] p-5 sm:p-7">
+              <h2 className="flex items-center gap-2 text-lg font-bold">
+                <PlusCircle className="text-sky-400" /> إدخال بيانات المحاضرة وتوليد QR
+              </h2>
+
+              <div>
+                <label className="mb-2 block text-sm text-slate-300">اسم الدكتور / المحاضر</label>
+                <input
+                  value={doctorName}
+                  onChange={(e) => setDoctorName(e.target.value)}
+                  placeholder="اكتب اسم الدكتور بالكامل"
+                  required
+                  className="w-full rounded-xl border border-sky-900 bg-[#031326] px-4 py-3 outline-none focus:border-sky-400"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm text-slate-300">اسم المادة الدراسية</label>
+                <input
+                  value={subjectName}
+                  onChange={(e) => setSubjectName(e.target.value)}
+                  placeholder="اكتب اسم المادة بالضبط"
+                  required
+                  className="w-full rounded-xl border border-sky-900 bg-[#031326] px-4 py-3 outline-none focus:border-sky-400"
+                />
+              </div>
+
+              <button type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 font-bold transition hover:bg-blue-500">
+                <QrIcon size={19} /> إنشاء الجلسة وتوليد الـ QR
+              </button>
+            </form>
+
+            {/* عرض الباركود بعد إدخال البيانات */}
+            {sessionCode && (
+              <div className="text-center rounded-2xl border border-sky-500/40 bg-sky-500/10 p-6 flex flex-col items-center justify-center">
+                <h3 className="text-lg font-bold text-sky-300">محاضرة: {subjectName}</h3>
+                <p className="text-sm text-slate-300 mt-1">المحاضر: {doctorName}</p>
+                
+                <div className="bg-white p-4 rounded-2xl shadow-lg my-4">
+                  <QRCodeSVG value={sessionCode} size={200} />
+                </div>
+
+                <p className="text-xs font-mono text-emerald-400">رمز الجلسة: {sessionCode}</p>
+                <p className="text-xs text-slate-400 mt-2">يستطيع الطلاب الآن مسح هذا الرمز لتسجيل الحضور في المادة.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </main>
+  );
+}

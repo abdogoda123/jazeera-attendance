@@ -1,0 +1,48 @@
+"use client";
+
+import Link from "next/link";
+import { Landmark, ArrowRight, Users, FileText, BarChart3, Settings } from "lucide-react";
+
+export default function AdminPage() {
+  return (
+    <main dir="rtl" className="min-h-screen bg-[#031326] px-4 py-8 text-white">
+      <div className="mx-auto max-w-4xl">
+        <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm text-sky-300 hover:text-white">
+          <ArrowRight size={18} /> الرئيسية
+        </Link>
+
+        <header className="mb-7 flex items-center gap-4">
+          <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4 text-sky-400">
+            <Landmark size={32} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">لوحة تحكم الإدارة</h1>
+            <p className="mt-1 text-sm text-slate-400">
+              إدارة النظام والتقارير العامة للحضور والغياب
+            </p>
+          </div>
+        </header>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="rounded-2xl border border-sky-900 bg-[#061c32] p-5">
+            <Users className="text-sky-400 mb-3" size={28} />
+            <h3 className="font-bold text-lg">إدارة الطلاب</h3>
+            <p className="mt-1 text-xs text-slate-400">عرض واستيراد قوائم الطلاب والأقسام الدراسيّة.</p>
+          </div>
+
+          <div className="rounded-2xl border border-sky-900 bg-[#061c32] p-5">
+            <BarChart3 className="text-sky-400 mb-3" size={28} />
+            <h3 className="font-bold text-lg">تقارير الحضور</h3>
+            <p className="mt-1 text-xs text-slate-400">تصدير وتقارير الإحصائيات لنسب الحضور والغياب.</p>
+          </div>
+
+          <div className="rounded-2xl border border-sky-900 bg-[#061c32] p-5 sm:col-span-2 lg:col-span-1">
+            <Settings className="text-sky-400 mb-3" size={28} />
+            <h3 className="font-bold text-lg">إعدادات النظام</h3>
+            <p className="mt-1 text-xs text-slate-400">إدارة الصلاحيات وقواعد البيانات والجداول.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+}

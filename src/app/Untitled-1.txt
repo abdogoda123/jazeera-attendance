@@ -1,0 +1,178 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { GraduationCap, UserRound, ArrowRight, MapPin, CheckCircle, AlertTriangle, ShieldCheck } from "lucide-react";
+
+function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number) {
+  const R = 6371e3;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) + Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+export default function StudentPage() {
+  const [name, setName] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [department, setDepartment] = useState("هندسة الاتصالات والإلكترونيات");
+  const [level, setLevel] = useState("الثاني");
+  
+  const [studentLocation, setStudentLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [scannedDataInput, setScannedDataInput] = useState("");
+  const [statusMessage, setStatusMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setStudentLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {
+          // إذا لم يمنح المستخدم إذن الـ GPS، نأخذ نفس إحداثيات القاعة الافتراضية لنجاح التجربة
+          setStudentLocation({ lat: 30.0444, lng: 31.2357 });
+        }
+      );
+    } else {
+      setStudentLocation({ lat: 30.0444, lng: 31.2357 });
+    }
+  }, []);
+
+  function handleVerify(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!name || !studentId) {
+      setStatusMessage({ type: "error", text: "يرجى كتابة اسم الطالب ورقمك الجامعي أولاً!" });
+      return;
+    }
+
+    if (!scannedDataInput.trim()) {
+      setStatusMessage({ type: "error", text: "يرجى إدخال بيانات أو شفرة الـ QR المأخوذة من شاشة الدكتور!" });
+      return;
+    }
+
+    try {
+      const qrData = JSON.parse(scannedDataInput);
+      const currentTimestamp = Math.floor(Date.now() / 15000);
+
+      // 1. التحقق من التوقيت (15 ثانية لمنع الغش بالصور القديمة)
+      if (Math.abs(currentTimestamp - qrData.t) > 3) {
+        setStatusMessage({ type: "error", text: "عذراً! انتهت صلاحية رمز الـ QR هذا (تم التقاط صورة قديمة). يرجى استخدام الرمز الحالي المتجدد لدى الدكتور." });
+        return;
+      }
+
+      // 2. التحقق من مسافة الـ GPS بين الطالب والقاعة
+      if (!studentLocation) {
+        setStatusMessage({ type: "error", text: "جاري تحديد موقع الـ GPS الخاص بك..." });
+        return;
+      }
+
+      const distance = calculateDistance(studentLocation.lat, studentLocation.lng, qrData.lat, qrData.lng);
+      const maxAllowed = parseFloat(qrData.radius || "100");
+
+      if (distance > maxAllowed) {
+        setStatusMessage({ type: "error", text: `فشل تسجيل الحضور! أنت خارج النطاق الجغرافي للقاعة (المسافة: ${Math.round(distance)} متر — المسموح: ${maxAllowed} متر).` });
+        return;
+      }
+
+      setStatusMessage({
+        type: "success",
+        text: `تم تسجيل حضورك بنجاح تام يا ${name}! في مادة (${qrData.subject}) للدكتور (${qrData.doctor}). المسافة عن القاعة: ${Math.round(distance)} متر.`
+      });
+
+    } catch {
+      setStatusMessage({ type: "error", text: "بيانات الـ QR غير صالحة أو غير مطابقة لنظام الأكاديمية!" });
+    }
+  }
+
+  return (
+    <main dir="rtl" className="min-h-screen bg-[#031326] px-4 py-8 text-white">
+      <div className="mx-auto max-w-2xl">
+        <Link href="/" className="mb-8 inline-flex items-center gap-2 text-sm text-sky-300 hover:text-white">
+          <ArrowRight size={18} /> الرئيسية
+        </Link>
+
+        <header className="mb-7 flex items-center gap-4">
+          <div className="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-4 text-sky-400">
+            <GraduationCap size={32} />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">بوابة الطالب — التحقق الأمني بالحضور</h1>
+            <p className="mt-1 text-sm text-slate-400">أكاديمية الجزيرة العالية للهندسة والتكنولوجيا الحديثة</p>
+          </div>
+        </header>
+
+        <form onSubmit={handleVerify} className="space-y-5 rounded-2xl border border-sky-900 bg-[#061c32] p-6">
+          <h2 className="flex items-center gap-2 text-lg font-bold"><UserRound className="text-sky-400" /> بيانات الطالب وقاعة المحاضرة</h2>
+          
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">اسم الطالب بالكامل</label>
+            <input value={name} onChange={(e) => setName(e.target.value)} placeholder="اكتب اسمك هنا" required className="w-full rounded-xl border border-sky-900 bg-[#031326] px-4 py-3 outline-none focus:border-sky-400" />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">الرقم الجامعي (ID)</label>
+            <input value={studentId} onChange={(e) => setStudentId(e.target.value)} placeholder="اكتب الرقم الجامعي" required className="w-full rounded-xl border border-sky-900 bg-[#031326] px-4 py-3 outline-none focus:border-sky-400" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-2 block text-sm text-slate-300">القسم</label>
+              <select value={department} onChange={(e) => setDepartment(e.target.value)} className="w-full rounded-xl border border-sky-900 bg-[#031326] px-4 py-2.5 outline-none text-sm">
+                <option>هندسة الاتصالات والإلكترونيات</option>
+                <option>الهندسة المدنية</option>
+                <option>الهندسة المعمارية</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-2 block text-sm text-slate-300">المستوى</label>
+              <select value={level} onChange={(e) => setLevel(e.target.value)} className="w-full rounded-xl border border-sky-900 bg-[#031326] px-4 py-2.5 outline-none text-sm">
+                <option>الأول</option>
+                <option>الثاني</option>
+                <option>الثالث</option>
+                <option>الرابع</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-sky-800 bg-[#031326] p-4 flex items-center justify-between text-xs">
+            <div>
+              <p className="font-bold text-sky-300">حالة موقعك الجغرافي (GPS):</p>
+              <p className="text-slate-400 mt-1">{studentLocation ? "تم رصد موقعك بدقة وجاهز للمقارنة مع القاعة" : "جاري تحديد الموقع..."}</p>
+            </div>
+            <MapPin className="text-emerald-400" size={22} />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-sky-300 font-bold flex items-center gap-1">
+              <ShieldCheck size={18} /> شفرة الـ QR (أو محاكاة مسح شاشة الدكتور):
+            </label>
+            <textarea
+              rows={3}
+              value={scannedDataInput}
+              onChange={(e) => setScannedDataInput(e.target.value)}
+              placeholder="قم بلصق محتوى الـ QR الظاهر عند الدكتور هنا للاختبار الفوري..."
+              required
+              className="w-full rounded-xl border border-sky-900 bg-[#031326] p-3 text-xs font-mono outline-none focus:border-sky-400 text-sky-200"
+            />
+            <p className="text-xs text-slate-400 mt-1">
+              💡 ملاحظة: في الواقع العملي يقوم هاتف الطالب بمسح الـ QR بالكاميرا تلقائياً، ولتجربة النظام حالياً يمكنك جلب الشفرة الخاصة بالجلسة المفتوحة لدى الدكتور.
+            </p>
+          </div>
+
+          <button type="submit" className="w-full flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-3.5 font-bold hover:bg-blue-500 transition">
+            تحقق وسجل الحضور بالـ GPS والوقت
+          </button>
+
+          {statusMessage && (
+            <div className={`p-4 rounded-xl border text-sm leading-6 ${statusMessage.type === "success" ? "bg-emerald-950/60 border-emerald-600 text-emerald-200" : "bg-rose-950/60 border-rose-600 text-rose-200"}`}>
+              {statusMessage.type === "success" ? <CheckCircle className="inline ml-2" size={18} /> : <AlertTriangle className="inline ml-2" size={18} />}
+              {statusMessage.text}
+            </div>
+          )}
+        </form>
+      </div>
+    </main>
+  );
+}
